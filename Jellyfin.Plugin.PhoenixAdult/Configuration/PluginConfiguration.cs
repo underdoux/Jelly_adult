@@ -25,14 +25,15 @@ namespace PhoenixAdult.Configuration
     {
         public PluginConfiguration()
         {
-            this.DatabaseUpdateURL = "https://api.github.com/repos/DirtyRacer1337/Jellyfin.Plugin.PhoenixAdult/contents/data";
             this.DatabaseHash = string.Empty;
             this.TokenStorage = string.Empty;
 
             this.UID = Guid.NewGuid().ToString();
             this.DisableAnalytics = false;
+            this.EnableDebug = false;
 
             this.DisableCaching = false;
+            this.DisableSSLCheck = false;
 
             this.ProxyEnable = false;
             this.ProxyHost = string.Empty;
@@ -49,6 +50,7 @@ namespace PhoenixAdult.Configuration
             this.MetadataAPIToken = string.Empty;
 
             this.DisableActors = false;
+            this.DisableGenres = false;
             this.DisableImageValidation = false;
             this.DisableImageSize = false;
             this.DisableAutoIdentify = false;
@@ -58,8 +60,6 @@ namespace PhoenixAdult.Configuration
             this.PreferedActorNameSource = PreferedActorNameSource.LocalDatabase;
         }
 
-        public string DatabaseUpdateURL { get; set; }
-
         public string DatabaseHash { get; set; }
 
         public string TokenStorage { get; set; }
@@ -68,7 +68,11 @@ namespace PhoenixAdult.Configuration
 
         public bool DisableAnalytics { get; set; }
 
+        public bool EnableDebug { get; set; }
+
         public bool DisableCaching { get; set; }
+
+        public bool DisableSSLCheck { get; set; }
 
         public bool ProxyEnable { get; set; }
 
@@ -91,6 +95,8 @@ namespace PhoenixAdult.Configuration
         public string MetadataAPIToken { get; set; }
 
         public bool DisableActors { get; set; }
+
+        public bool DisableGenres { get; set; }
 
         public bool DisableImageValidation { get; set; }
 

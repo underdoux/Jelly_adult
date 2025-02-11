@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -9,6 +10,7 @@ using System.Threading.Tasks;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Providers;
 using PhoenixAdult.Helpers.Utils;
+using PhoenixAdult.Sites;
 
 #if __EMBY__
 using MediaBrowser.Common.Net;
@@ -90,7 +92,7 @@ namespace PhoenixAdult.Helpers
             => Base58.EncodePlain(Encoding.UTF8.GetBytes(text));
 
         public static string Decode(string base64Text)
-            => Encoding.UTF8.GetString(Base58.DecodePlain(base64Text));
+            => Encoding.UTF8.GetString(Base58.DecodePlain(base64Text) ?? Array.Empty<byte>());
 
         public static (int[] siteNum, string siteName) GetSiteFromTitle(string title)
         {
@@ -140,7 +142,7 @@ namespace PhoenixAdult.Helpers
             clearSite = Regex.Replace(clearSite, @"\W", string.Empty);
 
             var matched = false;
-            while (!string.IsNullOrEmpty(clearSite) && clearName.Contains(" ", StringComparison.OrdinalIgnoreCase))
+            while (!string.IsNullOrEmpty(clearSite) && clearName.Contains(' ', StringComparison.OrdinalIgnoreCase))
             {
                 if (clearName.StartsWith(clearSite, StringComparison.OrdinalIgnoreCase))
                 {
@@ -153,9 +155,9 @@ namespace PhoenixAdult.Helpers
                 }
             }
 
-            if ((matched || !clearName.Contains(" ")) && !string.IsNullOrEmpty(clearSite))
+            if ((matched || !clearName.Contains(' ')) && !string.IsNullOrEmpty(clearSite))
             {
-                clearName = clearName.Replace(clearSite, string.Empty, StringComparison.OrdinalIgnoreCase);
+                clearName = clearName.Replace(clearSite, string.Empty, 1, StringComparison.OrdinalIgnoreCase);
             }
 
             clearName = string.Join(" ", clearName.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
@@ -338,5 +340,24 @@ namespace PhoenixAdult.Helpers
             return Plugin.Http.CreateClient().SendAsync(request, cancellationToken);
         }
 #endif
+
+        public static DateTime GetLinkerTime(Assembly assembly)
+        {
+            const string BuildVersionMetadataPrefix = "+build";
+
+            var attribute = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            if (attribute?.InformationalVersion != null)
+            {
+                var value = attribute.InformationalVersion;
+                var index = value.IndexOf(BuildVersionMetadataPrefix);
+                if (index > 0)
+                {
+                    value = value.Substring(index + BuildVersionMetadataPrefix.Length);
+                    return DateTime.ParseExact(value, "yyyy-MM-ddTHH:mm:ss:fffZ", CultureInfo.InvariantCulture);
+                }
+            }
+
+            return default;
+        }
     }
 }

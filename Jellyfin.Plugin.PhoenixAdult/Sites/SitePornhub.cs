@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaBrowser.Controller.Entities;
@@ -25,7 +26,7 @@ namespace PhoenixAdult.Sites
                 return result;
             }
 
-            if ((searchTitle.StartsWith("ph", StringComparison.OrdinalIgnoreCase) || int.TryParse(searchTitle, out _)) && !searchTitle.Contains(" ", StringComparison.OrdinalIgnoreCase))
+            if ((searchTitle.StartsWith("ph", StringComparison.OrdinalIgnoreCase) || int.TryParse(searchTitle, out _)) && !searchTitle.Contains(' ', StringComparison.OrdinalIgnoreCase))
             {
                 var sceneURL = new Uri(Helper.GetSearchBaseURL(siteNum) + $"/view_video.php?viewkey={searchTitle}");
                 var sceneID = new string[] { Helper.Encode(sceneURL.PathAndQuery) };
@@ -83,7 +84,8 @@ namespace PhoenixAdult.Sites
                 sceneURL = Helper.GetSearchBaseURL(siteNum) + sceneURL;
             }
 
-            var sceneData = await HTML.ElementFromURL(sceneURL, cancellationToken).ConfigureAwait(false);
+            var http = await HTTP.Request(sceneURL, HttpMethod.Post, cancellationToken).ConfigureAwait(false);
+            var sceneData = HTML.ElementFromStream(http.ContentStream);
             var json = sceneData.SelectSingleText("//script[@type='application/ld+json']");
             JObject sceneDataJSON = null;
             if (!string.IsNullOrEmpty(json))
@@ -153,7 +155,8 @@ namespace PhoenixAdult.Sites
                 sceneURL = Helper.GetSearchBaseURL(siteNum) + sceneURL;
             }
 
-            var sceneData = await HTML.ElementFromURL(sceneURL, cancellationToken).ConfigureAwait(false);
+            var http = await HTTP.Request(sceneURL, HttpMethod.Post, cancellationToken).ConfigureAwait(false);
+            var sceneData = HTML.ElementFromStream(http.ContentStream);
 
             var img = sceneData.SelectSingleText("//div[@id='player']//img/@src");
             if (!string.IsNullOrEmpty(img))

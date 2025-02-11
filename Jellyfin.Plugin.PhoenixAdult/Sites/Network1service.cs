@@ -38,7 +38,7 @@ namespace PhoenixAdult.Sites
             if (db.ContainsKey(keyName))
             {
                 string token = (string)db[keyName],
-                    res = Encoding.UTF8.GetString(Helper.ConvertFromBase64String(token.Split('.')[1]));
+                    res = Encoding.UTF8.GetString(Helper.ConvertFromBase64String(token.Split('.')[1]) ?? Array.Empty<byte>());
 
                 if ((int)JObject.Parse(res)["exp"] > DateTimeOffset.UtcNow.ToUnixTimeSeconds())
                 {
@@ -49,8 +49,8 @@ namespace PhoenixAdult.Sites
             if (string.IsNullOrEmpty(result))
             {
                 var http = await HTTP.Request(Helper.GetSearchBaseURL(siteNum), HttpMethod.Head, cancellationToken).ConfigureAwait(false);
-                var instanceToken = http.Cookies.Where(o => o.Name == "instance_token");
-                if (!instanceToken.Any())
+                var instanceToken = http.Cookies?.Where(o => o.Name == "instance_token");
+                if (instanceToken == null || !instanceToken.Any())
                 {
                     return result;
                 }

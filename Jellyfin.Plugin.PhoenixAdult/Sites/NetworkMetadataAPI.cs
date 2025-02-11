@@ -24,6 +24,7 @@ namespace PhoenixAdult.Sites
             if (!string.IsNullOrEmpty(Plugin.Instance.Configuration.MetadataAPIToken))
             {
                 headers.Add("Authorization", $"Bearer {Plugin.Instance.Configuration.MetadataAPIToken}");
+                headers.Add("User-Agent", $"{Consts.PluginInstance}/{Consts.PluginVersion}");
             }
 
             var http = await HTTP.Request(url, cancellationToken, headers).ConfigureAwait(false);
@@ -181,6 +182,11 @@ namespace PhoenixAdult.Sites
             result.Add(new RemoteImageInfo
             {
                 Url = (string)sceneData["poster"],
+                Type = ImageType.Primary,
+            });
+            result.Add(new RemoteImageInfo
+            {
+                Url = (string)sceneData["background"]["full"],
                 Type = ImageType.Primary,
             });
             result.Add(new RemoteImageInfo

@@ -48,7 +48,11 @@ namespace PhoenixAdult.Helpers.Utils
             {
                 Logger.Error($"GetImagesSizeAndValidate error: \"{e}\"");
 
-                await Analytics.Send(null, null, null, null, null, null, e, cancellationToken).ConfigureAwait(false);
+                await Analytics.Send(
+                    new AnalyticsExeption
+                    {
+                        Request = string.Join(" | ", cleanImages.Select(o => o.Url)),
+                    }, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -136,19 +140,27 @@ namespace PhoenixAdult.Helpers.Utils
                 http = await HTTP.Request(item.Url, cancellationToken).ConfigureAwait(false);
                 if (http.IsOK)
                 {
-                    using (var img = SKBitmap.Decode(http.ContentStream))
+                    SKImage img = null;
+
+                    try
                     {
-                        if (img != null && img.Width > 100)
+                        img = SKImage.FromEncodedData(http.ContentStream);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error($"ImageHelper error: \"{e}\"");
+                    }
+
+                    if (img != null && img.Width > 100)
+                    {
+                        return new RemoteImageInfo
                         {
-                            return new RemoteImageInfo
-                            {
-                                ProviderName = item.ProviderName,
-                                Url = item.Url,
-                                Type = item.Type,
-                                Height = img.Height,
-                                Width = img.Width,
-                            };
-                        }
+                            ProviderName = item.ProviderName,
+                            Url = item.Url,
+                            Type = item.Type,
+                            Height = img.Height,
+                            Width = img.Width,
+                        };
                     }
                 }
             }

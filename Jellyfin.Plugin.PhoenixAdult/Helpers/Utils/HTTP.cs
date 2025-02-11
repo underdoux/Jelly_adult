@@ -19,13 +19,20 @@ namespace PhoenixAdult.Helpers.Utils
     {
         static HTTP()
         {
+            CloudflareHandler = new ClearanceHandler(Plugin.Instance.Configuration.FlareSolverrURL)
+            {
+                MaxTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds,
+            };
+
             if (Plugin.Instance.Configuration.ProxyEnable && !string.IsNullOrEmpty(Plugin.Instance.Configuration.ProxyHost) && Plugin.Instance.Configuration.ProxyPort > 0)
             {
+                Logger.Info("Proxy Enabled");
                 var proxy = new List<ProxyInfo>();
 
                 if (string.IsNullOrEmpty(Plugin.Instance.Configuration.ProxyLogin) || string.IsNullOrEmpty(Plugin.Instance.Configuration.ProxyPassword))
                 {
                     proxy.Add(new ProxyInfo(Plugin.Instance.Configuration.ProxyHost, Plugin.Instance.Configuration.ProxyPort));
+                    CloudflareHandler.ProxyUrl = $"socks5://{Plugin.Instance.Configuration.ProxyHost}:{Plugin.Instance.Configuration.ProxyPort}";
                 }
                 else
                 {
@@ -45,11 +52,10 @@ namespace PhoenixAdult.Helpers.Utils
                 Proxy = Proxy,
             };
 
-            CloudflareHandler = new ClearanceHandler(Plugin.Instance.Configuration.FlareSolverrURL)
+            if (Plugin.Instance.Configuration.DisableSSLCheck)
             {
-                MaxTimeout = (int)TimeSpan.FromSeconds(120).TotalMilliseconds,
-                UserAgent = GetUserAgent(),
-            };
+                HttpHandler.ServerCertificateCustomValidationCallback += (sender, certificate, chain, errors) => true;
+            }
 
             if (!Plugin.Instance.Configuration.DisableCaching)
             {
@@ -82,7 +88,7 @@ namespace PhoenixAdult.Helpers.Utils
         private static HttpClient Http { get; set; }
 
         public static string GetUserAgent()
-            => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36";
+            => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36";
 
         public static async Task<HTTPResponse> Request(string url, HttpMethod method, HttpContent param, IDictionary<string, string> headers, IDictionary<string, string> cookies, CancellationToken cancellationToken)
         {
@@ -125,7 +131,7 @@ namespace PhoenixAdult.Helpers.Utils
                 }
             }
 
-            if (CacheHandler != null && request.RequestUri.AbsoluteUri == Plugin.Instance.Configuration.DatabaseUpdateURL)
+            if (CacheHandler != null && request.RequestUri.AbsoluteUri == Consts.DatabaseUpdateURL)
             {
                 CacheHandler.InvalidateCache(request.RequestUri);
             }
@@ -139,7 +145,12 @@ namespace PhoenixAdult.Helpers.Utils
             {
                 Logger.Error($"Request error: {e.Message}");
 
-                await Analytics.Send(url, null, null, null, null, null, e, cancellationToken).ConfigureAwait(false);
+                await Analytics.Send(
+                    new AnalyticsExeption
+                    {
+                        Request = url,
+                        Exception = e,
+                    }, cancellationToken).ConfigureAwait(false);
             }
 
             if (response != null)

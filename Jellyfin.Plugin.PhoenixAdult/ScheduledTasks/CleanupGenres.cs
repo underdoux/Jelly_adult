@@ -27,7 +27,11 @@ namespace PhoenixAdult.ScheduledTasks
 
         public string Category => Plugin.Instance.Name;
 
+#if __EMBY__
         public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+#else
+        public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+#endif
         {
             await Task.Yield();
             progress?.Report(0);
@@ -48,7 +52,7 @@ namespace PhoenixAdult.ScheduledTasks
                         item.Genres = genres;
 
 #if __EMBY__
-                        this.libraryManager.UpdateItem(item, item, ItemUpdateType.MetadataEdit);
+                        this.libraryManager.UpdateItem(item, item, ItemUpdateType.MetadataEdit, null);
 #else
                         await this.libraryManager.UpdateItemAsync(item, item, ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
 #endif

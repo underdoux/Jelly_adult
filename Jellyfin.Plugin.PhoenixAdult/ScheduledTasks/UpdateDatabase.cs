@@ -19,7 +19,11 @@ namespace PhoenixAdult.ScheduledTasks
 
         public string Category => Plugin.Instance.Name;
 
+#if __EMBY__
         public async Task Execute(CancellationToken cancellationToken, IProgress<double> progress)
+#else
+        public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
+#endif
         {
             await Task.Yield();
             progress?.Report(0);
@@ -30,7 +34,7 @@ namespace PhoenixAdult.ScheduledTasks
                 db = JObject.Parse(Plugin.Instance.Configuration.DatabaseHash);
             }
 
-            var data = await HTTP.Request(Plugin.Instance.Configuration.DatabaseUpdateURL, cancellationToken).ConfigureAwait(false);
+            var data = await HTTP.Request(Consts.DatabaseUpdateURL, cancellationToken).ConfigureAwait(false);
             if (data.IsOK)
             {
                 var json = JArray.Parse(data.Content);

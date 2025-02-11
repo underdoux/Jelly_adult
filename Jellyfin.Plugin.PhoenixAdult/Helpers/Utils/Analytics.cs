@@ -7,8 +7,29 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using PhoenixAdult.Configuration;
 
+#if __EMBY__
+#else
+// using Sentry;
+#endif
+
 namespace PhoenixAdult.Helpers.Utils
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1649:File name should match first type name", Justification = "Temp")]
+    public struct AnalyticsExeption
+    {
+        public string Request { get; set; }
+
+        public int[] SiteNum { get; set; }
+
+        public string SearchTitle { get; set; }
+
+        public DateTime? SearchDate { get; set; }
+
+        public string ProviderName { get; set; }
+
+        public Exception Exception { get; set; }
+    }
+
     internal static class Analytics
     {
         public static readonly string LogsPath = Path.Combine(Plugin.Instance.DataFolderPath, "logs");
@@ -17,9 +38,55 @@ namespace PhoenixAdult.Helpers.Utils
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "For future")]
 
-        public static async Task Send(string request, int[] siteNum, string siteName, string searchTitle, DateTime? searchDate, string providerName, Exception e, CancellationToken cancellationToken)
+        public static async Task Send(AnalyticsExeption exception, CancellationToken cancellationToken)
         {
+            AnalyticsData = new AnalyticsStructure
+            {
+                User = new UserStructure
+                {
+                    DateTime = DateTime.UtcNow,
+                    ServerPlatform = Consts.PluginInstance,
+                    PluginVersion = Consts.PluginVersion,
+                    Options = Plugin.Instance.Configuration,
+                },
+                Info = new InfoStructure
+                {
+                    Request = exception.Request,
+                    SiteNum = exception.SiteNum != null ? $"{exception.SiteNum[0]}#{exception.SiteNum[1]}" : null,
+                    SiteName = exception.SiteNum != null ? Helper.GetSearchSiteName(exception.SiteNum) : null,
+                    SearchTitle = exception.SearchTitle,
+                    SearchDate = exception.SearchDate.HasValue ? exception.SearchDate.Value.ToString("yyyy-MM-dd") : null,
+                    ProviderName = exception.ProviderName,
+                },
+                Error = new ErrorStructure
+                {
+                    Name = exception.Exception.Message,
+                    Text = exception.Exception.StackTrace,
+                },
+            };
+
             if (!Plugin.Instance.Configuration.DisableAnalytics)
+            {
+#if __EMBY__
+#else
+                /*
+                SentrySdk.ConfigureScope(scope =>
+                {
+                    scope.User = new User()
+                    {
+                        Id = Plugin.Instance.Configuration.UID,
+                    };
+                    scope.Release = AnalyticsData.User.PluginVersion;
+                    scope.Environment = AnalyticsData.User.ServerPlatform;
+                    scope.Contexts["Options"] = AnalyticsData.User.Options;
+                    scope.Contexts["Info"] = AnalyticsData.Info;
+                });
+                SentrySdk.CaptureException(exception.Exception);
+                */
+#endif
+            }
+
+            if (Plugin.Instance.Configuration.EnableDebug)
             {
                 if (!Directory.Exists(LogsPath))
                 {
@@ -29,30 +96,6 @@ namespace PhoenixAdult.Helpers.Utils
 
                 var fileName = $"{DateTime.Now.ToString("yyyyMMddHHmmssfffffff")}.json.gz";
                 fileName = Path.Combine(LogsPath, fileName);
-
-                AnalyticsData = new AnalyticsStructure
-                {
-                    User = new UserStructure
-                    {
-                        DateTime = DateTime.UtcNow,
-                        PluginVersion = Plugin.Instance.Version.ToString(),
-                        Options = Plugin.Instance.Configuration,
-                    },
-                    Info = new InfoStructure
-                    {
-                        Request = request,
-                        SiteNum = siteNum != null ? $"{siteNum[0]}#{siteNum[1]}" : null,
-                        SiteName = siteName,
-                        SearchTitle = searchTitle,
-                        SearchDate = searchDate.HasValue ? searchDate.Value.ToString("yyyy-MM-dd") : null,
-                        ProviderName = providerName,
-                    },
-                    Error = new ErrorStructure
-                    {
-                        Name = e.Message,
-                        Text = e.StackTrace,
-                    },
-                };
 
                 var json = JsonConvert.SerializeObject(AnalyticsData, new JsonSerializerSettings
                 {
@@ -82,6 +125,8 @@ namespace PhoenixAdult.Helpers.Utils
             public string UID { get; set; }
 
             public DateTime DateTime { get; set; }
+
+            public string ServerPlatform { get; set; }
 
             public string PluginVersion { get; set; }
 
